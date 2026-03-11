@@ -1,0 +1,11 @@
+{
+  "name": "ytmp3",
+  "version": "0.1.0",
+  "description": "Lightweight CLI wrapper around yt-dlp to extract MP3",
+  "bin": {
+    "ytmp3": "./cli.js"
+  },
+  "type": "commonjs",
+  "license": "MIT",
+  "dependencies": {}
+}
