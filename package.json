@@ -5,6 +5,9 @@
   "bin": {
     "ytmp3": "./cli.js"
   },
+  "scripts": {
+    "test": "node --test"
+  },
   "type": "commonjs",
   "license": "MIT",
   "dependencies": {}
