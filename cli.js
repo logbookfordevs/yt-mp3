@@ -2,16 +2,18 @@
 
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const readline = require("readline/promises");
 const { spawnSync } = require("child_process");
 
 const DEFAULT_ARGS = {
   url: null,
-  output: ".",
+  output: path.join(os.homedir(), "Downloads"),
   noPlaylist: true,
   cookiesFromBrowser: null,
   help: false,
   interactive: false,
+  video: false,
 };
 
 const supportsColor = !process.env.NO_COLOR;
@@ -66,6 +68,10 @@ function parseArgs(argv) {
       args.noPlaylist = false;
       continue;
     }
+    if (arg === "--video") {
+      args.video = true;
+      continue;
+    }
     if (arg === "--no-playlist") {
       args.noPlaylist = true;
       continue;
@@ -91,17 +97,13 @@ function parseArgs(argv) {
   return args;
 }
 
-function buildYtDlpArgs({ url, outputDir, noPlaylist, cookiesFromBrowser }) {
+function buildYtDlpArgs({ url, outputDir, noPlaylist, cookiesFromBrowser, video = false }) {
   const outputTemplate = path.join(outputDir, "%(title)s.%(ext)s");
-  const ytdlpArgs = [
-    "-x",
-    "--audio-format",
-    "mp3",
-    "--audio-quality",
-    "0",
-    "-o",
-    outputTemplate,
-  ];
+  const ytdlpArgs = video
+    ? []
+    : ["-x", "--audio-format", "mp3", "--audio-quality", "0"];
+
+  ytdlpArgs.push("-o", outputTemplate);
   if (noPlaylist) {
     ytdlpArgs.push("--no-playlist");
   }
@@ -121,12 +123,13 @@ function printHelp() {
   process.stdout.write(
     `${theme.title("ytmp3")}\n` +
       `${theme.caption("A tiny Logbook-flavored deckhand for yt-dlp.")}\n\n` +
-      "Usage: ytmp3 <YouTube URL> [-o OUTPUT_DIR] [--cookies-from-browser NAME] [--playlist]\n" +
+      "Usage: ytmp3 <URL> [--video] [-o OUTPUT_DIR] [--cookies-from-browser NAME] [--playlist]\n" +
       "       ytmp3 --interactive\n" +
       "\n" +
       "Options:\n" +
       "  -i, --interactive  Start a guided download flow\n" +
-      "  -o, --output       Output directory (default: current directory)\n" +
+      "  --video           Download video instead of extracting MP3\n" +
+      "  -o, --output       Output directory (default: ~/Downloads)\n" +
       "  --cookies-from-browser  Browser name for cookies (e.g., chrome)\n" +
       "  --playlist         Allow playlist downloads (default: disabled)\n" +
       "  -h, --help         Show help\n"
@@ -138,9 +141,10 @@ function formatPrompt(message, initial = "") {
   return `${theme.label(message)}${suffix}: `;
 }
 
-function formatSummary({ url, outputDir, createOutput, allowPlaylist, cookieBrowser }, options = {}) {
+function formatSummary({ url, outputDir, createOutput, allowPlaylist, cookieBrowser, video = false }, options = {}) {
   const rows = [
     ["URL", url],
+    ["Format", video ? "Video (best available)" : "Audio (MP3)"],
     ["Output", `${outputDir}${createOutput ? " (will create)" : ""}`],
     ["Playlist", allowPlaylist ? "allowed" : "single video only"],
     ["Cookies", cookieBrowser || "none"],
@@ -209,12 +213,16 @@ async function promptForDownload(args) {
 
   process.stdout.write(
     `\n${theme.title("ytmp3 guided setup")}\n` +
-      `${theme.caption("Charting the cleanest path from link to MP3.")}\n\n`
+      `${theme.caption("Charting the cleanest path from link to audio or video.")}\n\n`
   );
 
   try {
-    const url = await askRequired("YouTube URL", args.url || "");
-    const output = await askRequired("Save MP3 files to", args.output || ".");
+    const url = await askRequired("Video URL (YouTube, X, or another supported site)", args.url || "");
+    const video = await select("Download format", [
+      { title: "Audio (MP3)", value: false },
+      { title: "Video (best available)", value: true },
+    ], args.video ? 1 : 0);
+    const output = await askRequired("Save files to", args.output || DEFAULT_ARGS.output);
     const allowPlaylist = await confirm("Allow playlist downloads?", !args.noPlaylist);
     const cookieChoices = [
       { title: "No cookies", value: "" },
@@ -249,7 +257,7 @@ async function promptForDownload(args) {
     }
 
     process.stdout.write(
-      `\n${formatSummary({ url, outputDir, createOutput, allowPlaylist, cookieBrowser })}\n\n`
+      `\n${formatSummary({ url, outputDir, createOutput, allowPlaylist, cookieBrowser, video })}\n\n`
     );
 
     const ready = await confirm("Start download?", true);
@@ -267,6 +275,7 @@ async function promptForDownload(args) {
       output: outputDir,
       noPlaylist: !allowPlaylist,
       cookiesFromBrowser: cookieBrowser,
+      video,
     };
   } finally {
     rl.close();
@@ -306,6 +315,7 @@ async function main(argv = process.argv) {
     outputDir,
     noPlaylist: download.noPlaylist,
     cookiesFromBrowser: download.cookiesFromBrowser,
+    video: download.video,
   });
   const res = spawnSync("yt-dlp", ytdlpArgs, { stdio: "inherit" });
 

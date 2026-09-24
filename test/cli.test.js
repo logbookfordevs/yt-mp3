@@ -22,6 +22,7 @@ test("parseArgs keeps the existing direct URL flow", () => {
     cookiesFromBrowser: "chrome",
     help: false,
     interactive: false,
+    video: false,
   });
 });
 
@@ -30,6 +31,42 @@ test("parseArgs supports explicit interactive mode", () => {
 
   assert.equal(args.interactive, true);
   assert.equal(args.url, null);
+});
+
+test("--video works before or after an X URL and in guided mode", () => {
+  const url = "https://x.com/jh3yy/status/2102885700979048558/video/1";
+
+  for (const flags of [["--video", url], [url, "--video"]]) {
+    const args = parseArgs(["node", "cli.js", ...flags]);
+    assert.equal(args.video, true);
+    assert.equal(args.url, url);
+  }
+
+  const args = parseArgs(["node", "cli.js", "--interactive", "--video"]);
+  assert.equal(args.video, true);
+  assert.equal(args.interactive, true);
+});
+
+test("video downloads preserve the URL and options without audio extraction", () => {
+  const url = "https://x.com/jh3yy/status/2102885700979048558/video/1";
+  const args = buildYtDlpArgs({
+    url,
+    outputDir: "/tmp/videos",
+    noPlaylist: true,
+    cookiesFromBrowser: "chrome",
+    video: true,
+  });
+
+  assert.deepEqual(args, [
+    "-o", "/tmp/videos/%(title)s.%(ext)s",
+    "--no-playlist", "--cookies-from-browser", "chrome", url,
+  ]);
+});
+
+test("summary displays the selected download format", () => {
+  const download = { url: "https://x.com/example/status/123", outputDir: "/tmp" };
+  assert.match(formatSummary(download, { color: false }), /Format: Audio \(MP3\)/);
+  assert.match(formatSummary({ ...download, video: true }, { color: false }), /Format: Video \(best available\)/);
 });
 
 test("buildYtDlpArgs converts a prompt result into yt-dlp arguments", () => {
