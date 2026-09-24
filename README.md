@@ -1,3 +1,5 @@
+![ytmp3 — Links in. Files out. A file ferry delivers audio and video to Downloads; an MP3 passenger says, “I used to be a URL.”](assets/readme-banner.svg)
+
 # ytmp3
 
 Friendly CLI wrapper around `yt-dlp` to extract MP3 or download videos from YouTube, X, and other sites supported by yt-dlp.
