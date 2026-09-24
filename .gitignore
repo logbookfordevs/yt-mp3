@@ -1,0 +1,18 @@
+node_modules/
+.DS_Store
+__pycache__/
+*.py[cod]
+
+# Downloads written to the project root with -o .
+/*.mp3
+/*.mp4
+/*.m4a
+/*.webm
+/*.mkv
+/*.opus
+/*.ogg
+/*.wav
+/*.flac
+/*.part
+/*.part-Frag*
+/*.ytdl
