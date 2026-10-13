@@ -14,6 +14,7 @@ const DEFAULT_ARGS = {
   help: false,
   interactive: false,
   video: false,
+  open: true,
 };
 
 const supportsColor = !process.env.NO_COLOR;
@@ -72,6 +73,10 @@ function parseArgs(argv) {
       args.video = true;
       continue;
     }
+    if (arg === "--no-open") {
+      args.open = false;
+      continue;
+    }
     if (arg === "--no-playlist") {
       args.noPlaylist = true;
       continue;
@@ -119,11 +124,27 @@ function hasYtDlp() {
   return res.status === 0;
 }
 
+function getOpenCommand(dir, platform = process.platform) {
+  if (platform === "darwin") {
+    return { command: "open", args: [dir] };
+  }
+  if (platform === "win32") {
+    return { command: "explorer", args: [dir] };
+  }
+  return { command: "xdg-open", args: [dir] };
+}
+
+function openFolder(dir) {
+  const { command, args } = getOpenCommand(dir);
+  const res = spawnSync(command, args, { stdio: "ignore" });
+  return !res.error && (res.status === 0 || process.platform === "win32");
+}
+
 function printHelp() {
   process.stdout.write(
     `${theme.title("ytmp3")}\n` +
       `${theme.caption("A tiny Logbook-flavored deckhand for yt-dlp.")}\n\n` +
-      "Usage: ytmp3 <URL> [--video] [-o OUTPUT_DIR] [--cookies-from-browser NAME] [--playlist]\n" +
+      "Usage: ytmp3 <URL> [--video] [-o OUTPUT_DIR] [--cookies-from-browser NAME] [--playlist] [--no-open]\n" +
       "       ytmp3 --interactive\n" +
       "\n" +
       "Options:\n" +
@@ -132,6 +153,7 @@ function printHelp() {
       "  -o, --output       Output directory (default: ~/Downloads)\n" +
       "  --cookies-from-browser  Browser name for cookies (e.g., chrome)\n" +
       "  --playlist         Allow playlist downloads (default: disabled)\n" +
+      "  --no-open          Don't open the output folder when finished\n" +
       "  -h, --help         Show help\n"
   );
 }
@@ -276,6 +298,7 @@ async function promptForDownload(args) {
       noPlaylist: !allowPlaylist,
       cookiesFromBrowser: cookieBrowser,
       video,
+      open: args.open,
     };
   } finally {
     rl.close();
@@ -322,6 +345,10 @@ async function main(argv = process.argv) {
   if (res.status !== 0) {
     die("yt-dlp failed", res.status || 1);
   }
+
+  if (download.open !== false && !openFolder(outputDir)) {
+    process.stderr.write(`${theme.warning("warning")}: could not open ${outputDir}\n`);
+  }
 }
 
 if (require.main === module) {
@@ -333,6 +360,7 @@ if (require.main === module) {
 module.exports = {
   buildYtDlpArgs,
   formatSummary,
+  getOpenCommand,
   main,
   parseArgs,
   theme,

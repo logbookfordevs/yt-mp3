@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
-const { buildYtDlpArgs, formatSummary, parseArgs, theme } = require("../cli");
+const { buildYtDlpArgs, formatSummary, getOpenCommand, parseArgs, theme } = require("../cli");
 
 test("parseArgs keeps the existing direct URL flow", () => {
   const args = parseArgs([
@@ -23,7 +23,18 @@ test("parseArgs keeps the existing direct URL flow", () => {
     help: false,
     interactive: false,
     video: false,
+    open: true,
   });
+});
+
+test("--no-open disables opening the output folder", () => {
+  assert.equal(parseArgs(["node", "cli.js", "https://youtu.be/example", "--no-open"]).open, false);
+});
+
+test("getOpenCommand picks the native file manager per platform", () => {
+  assert.deepEqual(getOpenCommand("/tmp/music", "darwin"), { command: "open", args: ["/tmp/music"] });
+  assert.deepEqual(getOpenCommand("C:\\music", "win32"), { command: "explorer", args: ["C:\\music"] });
+  assert.deepEqual(getOpenCommand("/tmp/music", "linux"), { command: "xdg-open", args: ["/tmp/music"] });
 });
 
 test("parseArgs supports explicit interactive mode", () => {

@@ -70,6 +70,7 @@ Options:
 - `--video` Download video with yt-dlp's default best-available selection instead of extracting MP3
 - `--no-playlist` Skip playlist download (default)
 - `--playlist` Allow playlist download
+- `--no-open` Don't open the output folder when the download finishes (it opens by default)
 - `--cookies-from-browser` Use browser cookies to fix 403 (e.g., `chrome`)
 
 Examples:
